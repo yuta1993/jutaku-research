@@ -1,0 +1,12 @@
+# Python仮想環境
+.venv/
+__pycache__/
+*.pyc
+
+# 実行時に生成されるデータ・ログ
+data/snapshots/*.json
+logs/*.log
+
+# 機密情報（メールのアプリパスワード等）— 絶対にコミットしない
+.env
+config/mail_password.txt

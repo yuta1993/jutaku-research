@@ -1,0 +1,171 @@
+# ============================================================
+# うちなーらいふ 新着物件通知 - 監視設定
+# 編集するのは基本このファイルだけ。
+# ============================================================
+
+# HTTP取得まわり（通常は変更不要）
+http:
+  # アクセス時に名乗るUser-Agent
+  user_agent: "uchina-watch/1.0 (personal new-listing notifier)"
+  # ページ取得の間隔（秒）。サイトへの配慮として少し空ける
+  request_interval_sec: 1.1
+  # 1リクエストのタイムアウト（秒）
+  timeout_sec: 30
+  # 1監視あたりに取得する最大ページ数の上限（暴走防止の保険）
+  max_pages: 60
+
+# メール送信設定（Gmail + アプリパスワード想定）
+mail:
+  smtp_host: smtp.gmail.com
+  smtp_port: 587
+  user: yn.do.to.system.send@gmail.com         # 送信に使うGmailアドレス
+  from_addr: yn.do.to.system.send@gmail.com     # 差出人（通常はuserと同じ）
+  # --- アプリパスワードの渡し方 ---
+  #   password_file ... 指定ファイルの中身をパスワードとして読む（今回はこの方式）
+  #   password_env  ... 環境変数名。設定されていれば file より優先される（任意のフォールバック）
+  # このファイル自体には書かず、下記ファイルに16文字だけを保存する（.gitignore済み）。
+  password_file: config/mail_password.txt
+  password_env: UCHINA_MAIL_PASS
+  # メールで各物件のタイトル下に表示する項目（上から書いた順に表示。不要な行は消す/コメントアウト）
+  #   price=価格 / madori=間取り / land=土地面積 / building=建物面積 / built=築年 /
+  #   address=住所 / parking=駐車場 / transport=交通 / madori_detail=間取り詳細
+  detail_fields:
+    - price
+    - madori
+    - land
+    - building
+    - built
+    - address
+    - parking
+    - madori_detail
+  # regionごとに to を書かない場合に使う既定の通知先
+  default_to:
+    - nagoyuta1031@gmail.com
+    - ayana9384@gmail.com
+
+# ============================================================
+# 監視対象
+#   物件種別（search_type）ごとに、監視する地域（regions）を別々に指定する。
+#     search_type … house = 新築・中古一戸建て / mansion = マンション / tochi = 土地
+#   各 region:
+#     city_slug … サイトで対象市町村を開いたときの URL 末尾のローマ字
+#                  （例: /house/okinawashi → okinawashi）
+#     areas     … 地区slug の配列。空 [] または省略でその市町村全体を監視。
+#                  （地区slug は /house/okinawashi/noborikawa の末尾 noborikawa）
+#     to        … この地域だけ宛先を上書き（任意。省略時は上の default_to）
+# ============================================================
+watches:
+  # --- 住宅（新築・中古一戸建て）---
+  - search_type: house
+    regions:
+      - label: 南風原町・住宅（全域）
+        city_slug: haebarucho
+        areas: []
+
+      - label: 那覇市・住宅
+        city_slug: nahashi
+        areas:
+          - uema
+          - nakaima
+          - maaji
+          - shuritorihoricho
+          - shuriishiminecho
+
+      - label: 浦添市・住宅
+        city_slug: urasoeshi
+        areas:
+          - maeda
+          - kyozuka
+          - takushi
+
+      - label: 豊見城市・住宅
+        city_slug: tomigusukushi
+        areas:
+          - takamine
+          - madambashi
+          - tomigusuku
+          - noha
+          - takayasu
+          - taira
+
+      - label: 与那原町・住宅（全域）
+        city_slug: yonabarucho
+        areas: []
+
+      - label: 南城市大里・住宅
+        city_slug: nanjoshi
+        areas:
+          - ozatominei
+          - ozatoinamine
+          - ozatotakahira
+          - ozatonakama
+          - ozatofurugen
+
+  # --- 土地 ---
+  - search_type: tochi
+    regions:
+      - label: 南風原町・土地（全域）
+        city_slug: haebarucho
+        areas: []
+
+      - label: 那覇市・土地
+        city_slug: nahashi
+        areas:
+          - uema
+          - nakaima
+          - maaji
+          - shuritorihoricho
+          - shuriishiminecho
+
+      - label: 浦添市・住宅
+        city_slug: urasoeshi
+        areas:
+          - maeda
+          - kyozuka
+          - takushi
+
+      - label: 豊見城市・土地
+        city_slug: tomigusukushi
+        areas:
+          - takamine
+          - madambashi
+          - tomigusuku
+          - noha
+          - takayasu
+          - taira
+
+      - label: 与那原町・土地（全域）
+        city_slug: yonabarucho
+        areas: []
+
+      - label: 南城市大里・土地
+        city_slug: nanjoshi
+        areas:
+          - ozatominei
+          - ozatoinamine
+          - ozatotakahira
+          - ozatonakama
+          - ozatofurugen
+
+  - search_type: mansion
+    regions:
+      - label: 南風原町・マンション（全域）
+        city_slug: haebarucho
+        areas: []
+
+  # --- 例: マンションも監視したいとき（ブロックを増やすだけ）---
+  # - search_type: mansion
+  #   regions:
+  #     - label: 那覇市・マンション（全域）
+  #       city_slug: nahashi
+  #       areas: []
+
+  # --- 例: 1地域に複数地区 + 個別宛先 ---
+  #     - label: うるま市（赤野・石川）
+  #       city_slug: urumashi
+  #       areas:
+  #         - akano
+  #         - ishikawa
+  #       to:
+  #         - taro@example.com
+  #         - hanako@example.com
