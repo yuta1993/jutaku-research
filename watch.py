@@ -49,18 +49,45 @@ ROBOTS_CHECK_PATHS = ["/api/search", "/api/area/get_searchable_cities", "/api/ar
 log = logging.getLogger("uchina-watch")
 
 # メールで物件タイトルの下に出せる項目  key: (ラベル, [APIフィールド候補(先頭から最初に値があるものを使う)])
+#
+# ここに定義した「key」が、設定ファイル config/watchlist.yaml の mail.detail_fields に
+# 書ける値の全てである。detail_fields に並べた順にメール本文へ「ラベル: 値」で表示される。
+# （未指定時は下の DEFAULT_DETAIL_FIELDS が使われる）
+#
+# 設定できる key（プロパティ）一覧:
+#   price         価格      … 物件の価格表示
+#   madori        間取り    … 間取り（例 3LDK）
+#   land          土地面積  … 土地の面積
+#   building      建物面積  … 建物の面積
+#   built         築年      … 築年・建築年
+#   address       住所      … 所在地
+#   parking       駐車場    … 駐車場の有無/台数
+#   transport     交通      … 最寄り駅・バス等のアクセス情報
+#   madori_detail 間取り詳細 … 間取りの内訳（部屋ごと等の詳細）
+#
+# 値が空（APIフィールドが無い/空文字）の項目はその物件のメールには出さない。
+# 項目を増やしたい場合は、ここに「key: (ラベル, [APIフィールド候補])」を追加すればよい。
 ITEM_DETAIL_CATALOG = {
-    "price":         ("価格",     ["price_disp", "price_biko_disp"]),
-    "madori":        ("間取り",   ["madori_space_all_disp"]),
-    "land":          ("土地面積", ["tochi_metr_disp"]),
-    "building":      ("建物面積", ["building_metr_disp"]),
-    "built":         ("築年",     ["kenchiku_disp"]),
-    "address":       ("住所",     ["address_disp"]),
-    "parking":       ("駐車場",   ["short_parking_disp", "parking_disp"]),
-    "transport":     ("交通",     ["transport_info"]),
-    "madori_detail": ("間取り詳細", ["madori_detail_no_biko_disp"]),
+    "price":         ("・価格",     ["price_disp", "price_biko_disp"]),
+    "madori":        ("・間取り",   ["madori_space_all_disp"]),
+    "land":          ("・土地面積", ["tochi_metr_disp"]),
+    "building":      ("・建物面積", ["building_metr_disp"]),
+    "built":         ("・築年",     ["kenchiku_disp"]),
+    "address":       ("・住所",     ["address_disp"]),
+    "parking":       ("・駐車場",   ["short_parking_disp", "parking_disp"]),
+    "transport":     ("・交通",     ["transport_info"]),
+    "madori_detail": ("・間取り詳細", ["madori_detail_no_biko_disp"]),
 }
 DEFAULT_DETAIL_FIELDS = ["price", "madori", "land", "building", "built", "address"]
+
+# メール本文の区切り
+SEARCH_TYPE_LABELS = {       # watch_key 先頭の物件種別 → メール見出しの日本語名
+    "house": "住宅",
+    "tochi": "土地",
+    "mansion": "マンション",
+}
+TYPE_DIVIDER = "＝" * 13      # 物件種別（住宅/土地/マンション）の境目に入れる区切り線
+ITEM_DIVIDER = "-" * 23       # 各物件のタイトル直下（価格の上）に入れる区切り線
 
 
 # ---- ロギング設定 -----------------------------------------------------------
@@ -367,17 +394,33 @@ def record_robots_alert(now: dt.datetime) -> None:
 # ---- メール -----------------------------------------------------------------
 def build_email_body(new_by_watch: dict) -> str:
     lines = ["うちなーらいふに新着物件が出ました。\n"]
+    # 見出し（【住宅一覧（10件）】）に出す、物件種別ごとの新着合計件数を先に集計する
+    type_totals: dict[str, int] = {}
     for key, info in new_by_watch.items():
+        cur_type = key.split(":", 1)[0]
+        type_totals[cur_type] = type_totals.get(cur_type, 0) + len(info["items"])
+    prev_type = None
+    for key, info in new_by_watch.items():
+        cur_type = key.split(":", 1)[0]              # watch_key 先頭が物件種別（house/tochi/mansion）
+        if cur_type != prev_type:                    # 物件種別が変わったら【○○一覧（N件）】の見出しを入れる
+            if prev_type is not None:
+                lines.append("")                     # 前の種別との間に空行
+            type_label = SEARCH_TYPE_LABELS.get(cur_type, cur_type)
+            lines.append(TYPE_DIVIDER)
+            lines.append(f"【{type_label}一覧（{type_totals[cur_type]}件）】")
+            lines.append("")
+            prev_type = cur_type
         lines.append(f"■ {info['label']}（{key}） {len(info['items'])}件")
         for it in info["items"]:
             title = (it["title"] or "(物件)").replace("\n", " ").strip()
             if len(title) > 70:
                 title = title[:70] + "…"
             lines.append(f"  - {title}")
+            lines.append(ITEM_DIVIDER)    # タイトル直下（価格の上）に区切り線
             for label, val in it.get("details", []):
                 lines.append(f"      {label}: {val}")
             lines.append(f"    {it['url']}")
-            lines.append("")          # 物件ごとに空行を入れて読みやすく
+            lines.append("")              # 物件ごとに空行を入れて読みやすく
         lines.append("")
     return "\n".join(lines)
 
