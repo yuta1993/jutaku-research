@@ -76,7 +76,7 @@ watches:
         areas:
           - maeda
           - kyozuka
-          - takushi
+          # - takushi
 
       - label: 豊見城市・住宅
         city_slug: tomigusukushi
@@ -96,7 +96,7 @@ watches:
         city_slug: nanjoshi
         areas:
           - ozatominei
-          - ozatoinamine
+          # - ozatoinamine
           - ozatotakahira
           - ozatonakama
           - ozatofurugen
@@ -122,7 +122,7 @@ watches:
         areas:
           - maeda
           - kyozuka
-          - takushi
+          # - takushi
 
       - label: 豊見城市・土地
         city_slug: tomigusukushi
@@ -142,7 +142,7 @@ watches:
         city_slug: nanjoshi
         areas:
           - ozatominei
-          - ozatoinamine
+          # - ozatoinamine
           - ozatotakahira
           - ozatonakama
           - ozatofurugen
